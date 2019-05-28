@@ -11,5 +11,6 @@ fn main() -> io::Result<()> {
     let s = Server::new(&c);
     let lis = net::TcpListener::bind(c.listen)?;
     s.serve(lis)?;
+    //    std::thread::sleep(std::time::Duration::from_secs(5));
     Ok(())
 }

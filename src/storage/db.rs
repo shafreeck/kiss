@@ -1,19 +1,21 @@
 use std::collections::BTreeMap;
+use std::vec;
 
-use crate::storage::pmap::*;
-use crate::storage::txn::*;
+use super::pmap::ParallelMap;
+use super::txn::Txn;
 
 #[derive(Debug)]
 pub struct Db {
-    m: BTreeMap<Key, Value>,
+    m: ParallelMap,
 }
 
 impl Db {
     pub fn open() -> Db {
-        Db { m: BTreeMap::new() }
+        Db {
+            m: ParallelMap::new(100),
+        }
     }
-
-    pub fn begin() -> Txn {
-        Txn {}
+    pub fn get(&self, key: vec::Vec<u8>) {
+        self.m.get(key);
     }
 }
