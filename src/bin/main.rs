@@ -9,6 +9,5 @@ fn main() -> io::Result<()> {
     };
     let s = Server::new(&c);
     s.listen_and_serve(c.listen)?;
-    //    std::thread::sleep(std::time::Duration::from_secs(5));
     Ok(())
 }
