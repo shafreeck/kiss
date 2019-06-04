@@ -139,7 +139,12 @@ impl Kind {
             _ => {
                 // inline command which is a plain text like: foo\r\n
                 let line = buf.split_to(offset + 1);
-                Ok(Some(Kind::Inline(Bytes::from(&line[0..line.len() - 2]))))
+                let last = line.len() - 1;
+                if line[last - 1] == b'\r' {
+                    Ok(Some(Kind::Inline(Bytes::from(&line[0..line.len() - 2]))))
+                } else {
+                    Ok(Some(Kind::Inline(Bytes::from(&line[0..line.len() - 1]))))
+                }
             }
         }
     }
