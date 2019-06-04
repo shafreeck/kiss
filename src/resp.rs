@@ -7,9 +7,16 @@ use tokio::prelude::*;
 
 use super::Bytes;
 
-struct RespError {
-    reason: std::io::Error,
-    text: String,
+#[derive(Debug)]
+pub enum RespError {
+    ProtoError(&'static str),
+    IoError(std::io::Error),
+}
+
+impl From<std::io::Error> for RespError {
+    fn from(err: std::io::Error) -> RespError {
+        RespError::IoError(err)
+    }
 }
 
 #[derive(Debug)]
@@ -80,7 +87,7 @@ impl Kind {
             }
         }
     }
-    pub fn unmarshal(buf: &mut BytesMut) -> Result<Option<Kind>, std::io::Error> {
+    pub fn unmarshal(buf: &mut BytesMut) -> Result<Option<Kind>, RespError> {
         if buf.len() == 0 {
             return Ok(None);
         }
@@ -108,33 +115,42 @@ impl Kind {
             }
             b':' => {
                 let line = buf.split_to(offset + 1);
-                let val: i64 = atoi(&line[1..line.len() - 2]).unwrap();
-                Ok(Some(Kind::Integer(val)))
+                if let Some(val) = atoi(&line[1..line.len() - 2]) {
+                    Ok(Some(Kind::Integer(val)))
+                } else {
+                    Err(RespError::ProtoError("protocol invalid"))
+                }
             }
             b'$' => {
                 let line = buf.split_to(offset + 1);
-                let len: i64 = atoi(&line[1..line.len() - 2]).unwrap();
-                let next_offset = buf.iter().position(|b| *b == b'\n');
-                match next_offset {
-                    Some(end) => {
-                        if end - 1 != len as usize {
-                            // handle error
+                if let Some(len) = atoi::<i64>(&line[1..line.len() - 2]) {
+                    let next_offset = buf.iter().position(|b| *b == b'\n');
+                    match next_offset {
+                        Some(end) => {
+                            if end - 1 != len as usize {
+                                return Err(RespError::ProtoError("protocol invalid"));
+                            }
+                            let line = buf.split_to(end + 1);
+                            Ok(Some(Kind::BulkString(Some(Bytes::from(
+                                &line[..line.len() - 2],
+                            )))))
                         }
-                        let line = buf.split_to(end + 1);
-                        Ok(Some(Kind::BulkString(Some(Bytes::from(
-                            &line[..line.len() - 2],
-                        )))))
+                        None => Ok(None),
                     }
-                    None => Ok(None),
+                } else {
+                    Err(RespError::ProtoError("protocol invalid"))
                 }
             }
             b'*' => {
                 let line = buf.split_to(offset + 1);
-                let len: i64 = atoi(&line[1..line.len() - 2]).unwrap();
-                Ok(Some(Kind::Array(Array {
-                    size: len as usize,
-                    elems: vec::Vec::new(),
-                })))
+                if let Some(len) = atoi::<i64>(&line[1..line.len() - 2]) {
+                    Ok(Some(Kind::Array(Array {
+                        size: len as usize,
+                        elems: vec::Vec::new(),
+                    })))
+                } else {
+                    Err(RespError::ProtoError("protocol invalid"))
+                }
             }
             _ => {
                 // inline command which is a plain text like: foo\r\n
@@ -164,7 +180,7 @@ impl Codec {
 
 impl Encoder for Codec {
     type Item = Kind;
-    type Error = std::io::Error;
+    type Error = RespError;
 
     fn encode(&mut self, v: Self::Item, buf: &mut BytesMut) -> Result<(), Self::Error> {
         v.marshal(buf);
@@ -174,7 +190,7 @@ impl Encoder for Codec {
 
 impl Decoder for Codec {
     type Item = Kind;
-    type Error = std::io::Error;
+    type Error = RespError;
     fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         loop {
             match Kind::unmarshal(buf)? {
