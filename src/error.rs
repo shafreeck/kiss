@@ -39,8 +39,16 @@ impl error::Error for RedisError {
             None => None,
         }
     }
-
-    fn description(&self) -> &str {
+    fn description(&self) -> &str{
         self.msg
+    }
+}
+
+impl From<std::io::Error> for RedisError{
+    fn from(err: std::io::Error) -> RedisError {
+        RedisError{
+            msg: "",
+            reason: Some(Box::new(err))
+        }
     }
 }

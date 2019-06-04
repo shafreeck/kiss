@@ -1,3 +1,5 @@
+use std::error::Error;
+use std::fmt::Display;
 use std::sync::{Arc, Mutex};
 use std::vec;
 
@@ -22,7 +24,7 @@ impl Server {
         println!("new server {:?}", c);
         Server { db: Db::open() }
     }
-    pub fn serve(&self, lis: TcpListener) -> io::Result<()> {
+    pub fn serve(&self, lis: TcpListener) -> Result<(), Box<dyn Error>> {
         let incoming = lis.incoming();
         let server = incoming
             .map_err(|e| eprintln!("accept failed = {:?}", e))
@@ -31,10 +33,12 @@ impl Server {
                 let transport = Framed::new(sock, resp::Codec::new());
                 let (tx, rx) = transport.split();
                 let task = tx
-                    .send_all(rx.and_then(|req| {
-                        let cmd = parse_command(req).unwrap();
-                        println!("cmd {:?}", String::from_utf8(cmd.name));
-                        Ok(resp::Kind::Error("test".as_bytes().to_vec()))
+                    .send_all(rx.and_then(|req| match parse_command(req) {
+                        Ok(cmd) => {
+                            println!("cmd {:?}", String::from_utf8(cmd.name.clone()));
+                            Ok(resp::Kind::SimpleString(cmd.name))
+                        }
+                        Err(err) => Ok(resp::Kind::Error(err.description().as_bytes().to_vec())),
                     }))
                     .then(|resp| {
                         if let Err(err) = resp {
@@ -50,12 +54,13 @@ impl Server {
         Ok(())
     }
 
-    pub fn listen_and_serve(&self, addr: String) -> io::Result<()> {
+    pub fn listen_and_serve(&self, addr: String) -> Result<(), Box<dyn Error>> {
         let sock_addr = addr.parse().expect("parse listen address failed");
         let lis = TcpListener::bind(&sock_addr).expect("unable to bind TCP listener");
         self.serve(lis)
     }
 }
+
 pub fn parse_command(k: resp::Kind) -> error::Result<Command> {
     match k {
         resp::Kind::Array(a) => {
@@ -86,6 +91,6 @@ pub fn parse_command(k: resp::Kind) -> error::Result<Command> {
                 args: parsed[1..].to_vec(),
             })
         }
-        _ => Err(error::RedisError::new("unkown command")),
+        _ => Err(error::RedisError::new("protocol invalid")),
     }
 }
