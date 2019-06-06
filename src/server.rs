@@ -1,11 +1,8 @@
 use std::error::Error;
-use std::fmt::Display;
-use std::sync::{Arc, Mutex};
 use std::vec;
 
 use tokio::codec::Framed;
-use tokio::io;
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::{TcpListener};
 use tokio::prelude::*;
 
 use super::command::Command;

@@ -1,12 +1,10 @@
 //! pmap is a parallel map that use multiple cores
 
 use std::collections::BTreeMap;
-use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::vec;
 
 use super::threads;
-use array;
 use metrohash::MetroHash;
 
 pub type Key = Vec<u8>;

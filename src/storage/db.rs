@@ -1,8 +1,6 @@
-use std::collections::BTreeMap;
 use std::vec;
 
 use super::pmap::ParallelMap;
-use super::txn::Txn;
 
 #[derive(Debug)]
 pub struct Db {

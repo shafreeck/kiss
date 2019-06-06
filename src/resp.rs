@@ -3,7 +3,6 @@ use std::vec;
 use atoi::atoi;
 use bytes::{BufMut, BytesMut};
 use tokio::codec::{Decoder, Encoder};
-use tokio::prelude::*;
 
 use super::Bytes;
 
