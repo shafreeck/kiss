@@ -1,19 +1,15 @@
-use std::vec;
-
-use super::pmap::ParallelMap;
+use crate::storage::object::Dict;
 
 #[derive(Debug)]
 pub struct Db {
-    m: ParallelMap,
+    pub dict: Dict,
+    pub expires: Dict,
 }
-
 impl Db {
-    pub fn open() -> Db {
-        Db {
-            m: ParallelMap::new(100),
+    pub fn new() -> Db{
+        Db{
+            dict: Dict::new(),
+            expires: Dict::new()
         }
-    }
-    pub fn get(&self, key: vec::Vec<u8>) {
-        self.m.get(key);
     }
 }

@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 array={path="./array"}
 metrohash = "1.0.6"
-futures-preview = { version = "=0.3.0-alpha.16", features = ["async-await", "nightly"] }
+futures = "0.1.27"
 tokio = "0.1"
 bytes = "0.4.12"
 atoi = "0.3.1"
